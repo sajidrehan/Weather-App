@@ -13,6 +13,8 @@
 #import "NSDictionary+weather.h"
 #import "NSDictionary+weather_package.h"
 
+static NSString *const BaseURLString = @"http://www.raywenderlich.com/demos/weather_sample/";
+
 @interface WTTableViewController ()
 @property(strong) NSDictionary *weather;
 @end
@@ -21,112 +23,172 @@
 
 - (id)initWithStyle:(UITableViewStyle)style
 {
-    self = [super initWithStyle:style];
-    if (self) {
-        // Custom initialization
-    }
-    return self;
+        self = [super initWithStyle:style];
+        if (self) {
+                // Custom initialization
+        }
+        return self;
 }
 
 - (void)viewDidLoad
 {
-    [super viewDidLoad];
-    self.navigationController.toolbarHidden = NO;
-
-    // Uncomment the following line to preserve selection between presentations.
-    // self.clearsSelectionOnViewWillAppear = NO;
- 
-    // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
-    // self.navigationItem.rightBarButtonItem = self.editButtonItem;
+        [super viewDidLoad];
+        self.navigationController.toolbarHidden = NO;
+        
+        // Uncomment the following line to preserve selection between presentations.
+        // self.clearsSelectionOnViewWillAppear = NO;
+        
+        // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
+        // self.navigationItem.rightBarButtonItem = self.editButtonItem;
 }
 
 - (void)didReceiveMemoryWarning
 {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+        [super didReceiveMemoryWarning];
+        // Dispose of any resources that can be recreated.
 }
 
 - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
 {
-    if([segue.identifier isEqualToString:@"WeatherDetailSegue"]){
-        UITableViewCell *cell = (UITableViewCell *)sender;
-        NSIndexPath *indexPath = [self.tableView indexPathForCell:cell];
-        
-        WeatherAnimationViewController *wac = (WeatherAnimationViewController *)segue.destinationViewController;
-        
-        NSDictionary *w;
-        switch (indexPath.section) {
-            case 0: {
-                w = self.weather.currentCondition;
-                break;
-            }
-            case 1: {
-                w = [self.weather upcomingWeather][indexPath.row];
-                break;
-            }
-            default: {
-                break;
-            }
+        if([segue.identifier isEqualToString:@"WeatherDetailSegue"]){
+                UITableViewCell *cell = (UITableViewCell *)sender;
+                NSIndexPath *indexPath = [self.tableView indexPathForCell:cell];
+                
+                WeatherAnimationViewController *wac = (WeatherAnimationViewController *)segue.destinationViewController;
+                
+                NSDictionary *w;
+                switch (indexPath.section) {
+                        case 0: {
+                                w = self.weather.currentCondition;
+                                break;
+                        }
+                        case 1: {
+                                w = [self.weather upcomingWeather][indexPath.row];
+                                break;
+                        }
+                        default: {
+                                break;
+                        }
+                }
+                wac.weatherDictionary = w;
         }
-        wac.weatherDictionary = w;
-    }
 }
 
 #pragma mark - Actions
 
 - (IBAction)clear:(id)sender
 {
-    self.title = @"";
-    self.weather = nil;
-    [self.tableView reloadData];
+        self.title = @"";
+        self.weather = nil;
+        [self.tableView reloadData];
 }
 
 - (IBAction)jsonTapped:(id)sender
 {
-    
+        NSString *string = [NSString stringWithFormat:@"%@weather.php?format=json", BaseURLString];
+        NSURL *url = [NSURL URLWithString:string];
+        NSURLRequest *request = [NSURLRequest requestWithURL:url];
+        
+        AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
+        operation.responseSerializer = [AFJSONResponseSerializer serializer];
+        
+        [operation setCompletionBlockWithSuccess:^(AFHTTPRequestOperation *operation, id responseObject) {
+                self.weather = (NSDictionary *) responseObject;
+                self.title = @"JSON Retrieved";
+                [self.tableView reloadData];
+                
+                
+        } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
+                UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Error retrieving weather"
+                                                                    message:[error localizedDescription]
+                                                                   delegate:nil
+                                                          cancelButtonTitle:@"OK"
+                                                          otherButtonTitles:nil];
+                [alertView show];
+                
+        }];
+        
+        [operation start];
+        
+        
+        
 }
 
 - (IBAction)plistTapped:(id)sender
 {
-    
+        
 }
 
 - (IBAction)xmlTapped:(id)sender
 {
-    
+        
 }
 
 - (IBAction)clientTapped:(id)sender
 {
-    
+        
 }
 
 - (IBAction)apiTapped:(id)sender
 {
-    
+        
 }
 
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
 {
-    return 2;
+        return 2;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
 {
-    return 0;
+        if (!self.weather)
+                return 0;
+        switch (section) {
+                case 0: {
+                        return 1;
+                        
+                }
+                case 1: {
+                        NSArray *upcomingWeather = [self.weather upcomingWeather];
+                        return  upcomingWeather.count;
+                        
+                }
+                default:
+                        return 0;
+        }
+        
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    static NSString *CellIdentifier = @"WeatherCell";
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier forIndexPath:indexPath];
+        static NSString *CellIdentifier = @"WeatherCell";
+        UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier forIndexPath:indexPath];
+        
+        NSDictionary *daysWeather = nil;
+        
+        switch (indexPath.section) {
+                case 0:{
+                        daysWeather = [self.weather currentCondition];
+                        break;
+                }
+                case 1:{
+                        NSArray *upcomingWeather = [self.weather upcomingWeather];
+                        daysWeather = upcomingWeather[indexPath.row];
+                        break;
+                }
+                default:
+                        break;
     
-    // Configure the cell...
-    
-    
-    return cell;
+        }
+        
+        cell.textLabel.text = [daysWeather weatherDescription];
+        
+        
+        
+        
+        return cell;
 }
 
 
@@ -134,7 +196,7 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    // Navigation logic may go here. Create and push another view controller.
+        // Navigation logic may go here. Create and push another view controller.
 }
 
 @end
